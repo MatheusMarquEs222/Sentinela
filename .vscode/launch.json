@@ -1,0 +1,31 @@
+{
+  // Este projeto é Kotlin/Android puro (sem extensão de debug Kotlin/Java
+  // instalada), então estas configurações não anexam um debugger real:
+  // elas usam o tipo "node-terminal" (nativo do VS Code, não precisa de
+  // extensão extra) só para rodar os comandos de build/emulador no
+  // terminal integrado ao apertar F5 / Run and Debug.
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "type": "node-terminal",
+      "request": "launch",
+      "name": "Sentinela: emulador + build + instalar + abrir",
+      "command": "${workspaceFolder}/.vscode/run-emulator.sh",
+      "cwd": "${workspaceFolder}"
+    },
+    {
+      "type": "node-terminal",
+      "request": "launch",
+      "name": "Sentinela: só abrir o emulador",
+      "command": "${workspaceFolder}/.vscode/run-emulator.sh --only-emulator",
+      "cwd": "${workspaceFolder}"
+    },
+    {
+      "type": "node-terminal",
+      "request": "launch",
+      "name": "Sentinela: build + instalar + abrir (emulador já aberto)",
+      "command": "${workspaceFolder}/.vscode/run-emulator.sh --skip-emulator",
+      "cwd": "${workspaceFolder}"
+    }
+  ]
+}
