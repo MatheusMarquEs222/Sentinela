@@ -23,5 +23,6 @@ data class Alerta(
     val local: String,
     val descricao: String,
     val severidade: Severidade,
-    val horario: String
+    val horario: String,
+    val oficial: Boolean = false
 )

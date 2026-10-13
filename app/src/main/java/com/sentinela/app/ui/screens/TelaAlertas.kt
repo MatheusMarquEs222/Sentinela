@@ -3,24 +3,30 @@ package com.sentinela.app.ui.screens
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Notifications
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FloatingActionButton
-import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.ExtendedFloatingActionButton
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -30,11 +36,14 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.toMutableStateList
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.sentinela.app.model.Alerta
 import com.sentinela.app.model.Severidade
 import com.sentinela.app.ui.components.FormularioAlerta
 import com.sentinela.app.ui.components.ListaAlertas
+import com.sentinela.app.ui.theme.SentinelaTheme
 
 private fun alertasIniciais(): List<Alerta> = listOf(
     Alerta(
@@ -92,7 +101,8 @@ fun TelaAlertas(modifier: Modifier = Modifier) {
             local = "Toda a cidade",
             descricao = "Risco de deslizamento em áreas de encosta. Evite deslocamentos desnecessários.",
             severidade = Severidade.ALTA,
-            horario = "agora"
+            horario = "agora",
+            oficial = true
         )
         proximoId++
         alertas.add(0, alertaOficial)
@@ -103,24 +113,39 @@ fun TelaAlertas(modifier: Modifier = Modifier) {
         modifier = modifier,
         topBar = {
             TopAppBar(
-                title = { Text("Sentinela") },
+                title = {
+                    Column {
+                        Text("Sentinela", fontWeight = FontWeight.Bold)
+                        Text(
+                            text = "Alertas climáticos e de defesa civil",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                },
                 actions = {
-                    IconButton(onClick = { simularAlertaOficial() }) {
+                    FilledTonalButton(
+                        onClick = { simularAlertaOficial() },
+                        contentPadding = ButtonDefaults.ButtonWithIconContentPadding,
+                        modifier = Modifier.padding(end = 8.dp)
+                    ) {
                         Icon(
                             imageVector = Icons.Filled.Notifications,
-                            contentDescription = "Simular alerta oficial"
+                            contentDescription = null,
+                            modifier = Modifier.size(18.dp)
                         )
+                        Spacer(Modifier.width(6.dp))
+                        Text("Simular oficial")
                     }
                 }
             )
         },
         floatingActionButton = {
-            FloatingActionButton(onClick = { mostrarFormulario = !mostrarFormulario }) {
-                Icon(
-                    imageVector = if (mostrarFormulario) Icons.Filled.Close else Icons.Filled.Add,
-                    contentDescription = if (mostrarFormulario) "Fechar formulário" else "Registrar novo alerta"
-                )
-            }
+            ExtendedFloatingActionButton(
+                onClick = { mostrarFormulario = true },
+                icon = { Icon(Icons.Filled.Add, contentDescription = null) },
+                text = { Text("Registrar alerta") }
+            )
         }
     ) { innerPadding ->
         Column(
@@ -130,41 +155,11 @@ fun TelaAlertas(modifier: Modifier = Modifier) {
                 .padding(horizontal = 16.dp)
         ) {
             mensagemConfirmacao?.let { mensagem ->
-                Card(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(top = 8.dp),
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.primaryContainer
-                    )
-                ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(start = 16.dp, end = 4.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Text(
-                            text = mensagem,
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onPrimaryContainer,
-                            modifier = Modifier.weight(1f)
-                        )
-                        IconButton(onClick = { mensagemConfirmacao = null }) {
-                            Icon(imageVector = Icons.Filled.Close, contentDescription = "Fechar mensagem")
-                        }
-                    }
-                }
-            }
-
-            if (mostrarFormulario) {
-                FormularioAlerta(
-                    onSubmit = ::registrarAlerta,
-                    onCancelar = { mostrarFormulario = false },
-                    modifier = Modifier.padding(vertical = 12.dp)
+                BannerConfirmacao(
+                    mensagem = mensagem,
+                    onFechar = { mensagemConfirmacao = null },
+                    modifier = Modifier.padding(top = 8.dp)
                 )
-                HorizontalDivider(modifier = Modifier.padding(bottom = 8.dp))
             }
 
             ListaAlertas(
@@ -172,5 +167,52 @@ fun TelaAlertas(modifier: Modifier = Modifier) {
                 modifier = Modifier.weight(1f)
             )
         }
+
+        if (mostrarFormulario) {
+            ModalBottomSheet(
+                onDismissRequest = { mostrarFormulario = false },
+                sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+            ) {
+                FormularioAlerta(
+                    onSubmit = ::registrarAlerta,
+                    onCancelar = { mostrarFormulario = false }
+                )
+            }
+        }
+    }
+}
+
+/** Mensagem de confirmação exibida acima da lista, fechada pelo botão "Fechar". */
+@Composable
+private fun BannerConfirmacao(mensagem: String, onFechar: () -> Unit, modifier: Modifier = Modifier) {
+    Surface(
+        modifier = modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
+        color = MaterialTheme.colorScheme.primaryContainer,
+        contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+    ) {
+        Row(
+            modifier = Modifier.padding(start = 14.dp, end = 4.dp, top = 4.dp, bottom = 4.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            Icon(Icons.Filled.CheckCircle, contentDescription = null, modifier = Modifier.size(20.dp))
+            Text(
+                text = mensagem,
+                style = MaterialTheme.typography.bodyMedium,
+                modifier = Modifier.weight(1f)
+            )
+            TextButton(onClick = onFechar) {
+                Text("Fechar", fontWeight = FontWeight.Bold)
+            }
+        }
+    }
+}
+
+@Preview(showBackground = true, showSystemUi = true)
+@Composable
+private fun TelaAlertasPreview() {
+    SentinelaTheme(dynamicColor = false) {
+        TelaAlertas(modifier = Modifier.fillMaxSize())
     }
 }

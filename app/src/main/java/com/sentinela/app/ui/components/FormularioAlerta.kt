@@ -1,30 +1,44 @@
 package com.sentinela.app.ui.components
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.Button
-import androidx.compose.material3.Card
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilterChip
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.sentinela.app.model.Alerta
 import com.sentinela.app.model.Severidade
+import com.sentinela.app.ui.theme.SentinelaTheme
 
 /**
- * Formulário para registrar um novo alerta.
+ * Formulário para registrar um novo alerta (exibido dentro de um bottom sheet
+ * pela tela principal).
  *
  * O componente é "stateless" do ponto de vista de quem o usa: não recebe nem
  * expõe a lista de alertas, apenas devolve um [Alerta] pronto via [onSubmit]
@@ -33,7 +47,6 @@ import com.sentinela.app.model.Severidade
  * para o componente pai (a tela) no momento do envio, seguindo o padrão de
  * state hoisting.
  */
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun FormularioAlerta(
     onSubmit: (Alerta) -> Unit,
@@ -46,97 +59,195 @@ fun FormularioAlerta(
     var severidade by remember { mutableStateOf(Severidade.BAIXA) }
     var mensagemDeErro by remember { mutableStateOf<String?>(null) }
 
-    Card(modifier = modifier.fillMaxWidth()) {
-        Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            Text(text = "Registrar novo alerta", style = MaterialTheme.typography.titleMedium)
-
-            OutlinedTextField(
-                value = titulo,
-                onValueChange = {
-                    titulo = it
-                    mensagemDeErro = null
-                },
-                label = { Text("Tipo de ocorrência") },
-                placeholder = { Text("Ex: Alagamento, vendaval...") },
-                singleLine = true,
-                modifier = Modifier.fillMaxWidth()
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .verticalScroll(rememberScrollState())
+            .padding(horizontal = 20.dp)
+            .padding(bottom = 20.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        Column {
+            Text(
+                text = "Registrar novo alerta",
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold
             )
-
-            OutlinedTextField(
-                value = local,
-                onValueChange = {
-                    local = it
-                    mensagemDeErro = null
-                },
-                label = { Text("Local / bairro") },
-                singleLine = true,
-                modifier = Modifier.fillMaxWidth()
+            Text(
+                text = "Campos com * são obrigatórios.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
+        }
 
-            OutlinedTextField(
-                value = descricao,
-                onValueChange = { descricao = it },
-                label = { Text("Descrição") },
-                minLines = 2,
-                maxLines = 4,
-                modifier = Modifier.fillMaxWidth()
+        mensagemDeErro?.let { erro -> MensagemErro(erro) }
+
+        OutlinedTextField(
+            value = titulo,
+            onValueChange = {
+                titulo = it
+                mensagemDeErro = null
+            },
+            label = { Text("Tipo de ocorrência *") },
+            placeholder = { Text("Ex.: alagamento, vendaval") },
+            isError = mensagemDeErro != null && titulo.isBlank(),
+            singleLine = true,
+            shape = RoundedCornerShape(12.dp),
+            modifier = Modifier.fillMaxWidth()
+        )
+
+        OutlinedTextField(
+            value = local,
+            onValueChange = {
+                local = it
+                mensagemDeErro = null
+            },
+            label = { Text("Local / bairro *") },
+            placeholder = { Text("Ex.: Bairro Vila Nova") },
+            isError = mensagemDeErro != null && local.isBlank(),
+            singleLine = true,
+            shape = RoundedCornerShape(12.dp),
+            modifier = Modifier.fillMaxWidth()
+        )
+
+        OutlinedTextField(
+            value = descricao,
+            onValueChange = { descricao = it },
+            label = { Text("Descrição (opcional)") },
+            placeholder = { Text("O que está acontecendo?") },
+            minLines = 3,
+            maxLines = 5,
+            shape = RoundedCornerShape(12.dp),
+            modifier = Modifier.fillMaxWidth()
+        )
+
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text(
+                text = "Nível de severidade",
+                style = MaterialTheme.typography.labelLarge,
+                fontWeight = FontWeight.Bold
             )
-
-            Text(text = "Nível de severidade", style = MaterialTheme.typography.labelLarge)
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Severidade.entries.forEach { opcao ->
-                    FilterChip(
-                        selected = severidade == opcao,
+                    BotaoSeveridade(
+                        severidade = opcao,
+                        selecionado = severidade == opcao,
                         onClick = { severidade = opcao },
-                        label = { Text(opcao.rotulo) }
+                        modifier = Modifier.weight(1f)
                     )
                 }
             }
+        }
 
-            mensagemDeErro?.let { erro ->
-                Text(
-                    text = erro,
-                    color = MaterialTheme.colorScheme.error,
-                    style = MaterialTheme.typography.bodySmall
-                )
-            }
-
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                modifier = Modifier.fillMaxWidth()
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            OutlinedButton(
+                onClick = onCancelar,
+                modifier = Modifier
+                    .weight(1f)
+                    .height(48.dp)
             ) {
-                OutlinedButton(onClick = onCancelar, modifier = Modifier.weight(1f)) {
-                    Text("Cancelar")
-                }
-                Button(
-                    modifier = Modifier.weight(1f),
-                    onClick = {
-                        if (titulo.isBlank() || local.isBlank()) {
-                            mensagemDeErro = "Preencha ao menos o tipo e o local da ocorrência."
-                            return@Button
-                        }
-                        onSubmit(
-                            Alerta(
-                                id = 0, // o id definitivo é atribuído por quem recebe o alerta
-                                tipo = titulo.trim(),
-                                local = local.trim(),
-                                descricao = descricao.trim(),
-                                severidade = severidade,
-                                horario = "agora"
-                            )
-                        )
-                        titulo = ""
-                        local = ""
-                        descricao = ""
-                        severidade = Severidade.BAIXA
+                Text("Cancelar")
+            }
+            Button(
+                modifier = Modifier
+                    .weight(1f)
+                    .height(48.dp),
+                onClick = {
+                    if (titulo.isBlank() || local.isBlank()) {
+                        mensagemDeErro = "Preencha ao menos o tipo e o local da ocorrência."
+                        return@Button
                     }
-                ) {
-                    Text("Registrar")
+                    onSubmit(
+                        Alerta(
+                            id = 0, // o id definitivo é atribuído por quem recebe o alerta
+                            tipo = titulo.trim(),
+                            local = local.trim(),
+                            descricao = descricao.trim(),
+                            severidade = severidade,
+                            horario = "agora"
+                        )
+                    )
+                    titulo = ""
+                    local = ""
+                    descricao = ""
+                    severidade = Severidade.BAIXA
                 }
+            ) {
+                Text("Registrar")
             }
         }
+    }
+}
+
+@Composable
+private fun MensagemErro(texto: String) {
+    Surface(
+        shape = RoundedCornerShape(12.dp),
+        color = MaterialTheme.colorScheme.errorContainer,
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Row(
+            modifier = Modifier.padding(12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Icon(
+                Icons.Filled.Warning,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onErrorContainer,
+                modifier = Modifier.size(18.dp)
+            )
+            Text(
+                text = texto,
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onErrorContainer
+            )
+        }
+    }
+}
+
+/** Botão de escolha de severidade: a opção selecionada usa as cores do nível e um check. */
+@Composable
+private fun BotaoSeveridade(
+    severidade: Severidade,
+    selecionado: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val estilo = estiloDaSeveridade(severidade)
+    OutlinedButton(
+        onClick = onClick,
+        modifier = modifier.height(44.dp),
+        shape = RoundedCornerShape(12.dp),
+        border = BorderStroke(
+            width = 1.5.dp,
+            color = if (selecionado) estilo.cor else MaterialTheme.colorScheme.outline
+        ),
+        colors = ButtonDefaults.outlinedButtonColors(
+            containerColor = if (selecionado) estilo.fundo else MaterialTheme.colorScheme.surface,
+            contentColor = if (selecionado) estilo.cor else MaterialTheme.colorScheme.onSurface
+        ),
+        contentPadding = ButtonDefaults.TextButtonContentPadding
+    ) {
+        if (selecionado) {
+            Icon(Icons.Filled.Check, contentDescription = null, modifier = Modifier.size(16.dp))
+        }
+        Text(
+            text = severidade.rotulo,
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier.padding(start = if (selecionado) 4.dp else 0.dp)
+        )
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun FormularioAlertaPreview() {
+    SentinelaTheme(dynamicColor = false) {
+        FormularioAlerta(onSubmit = {}, onCancelar = {})
     }
 }

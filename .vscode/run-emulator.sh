@@ -9,10 +9,28 @@
 
 set -euo pipefail
 
-AVD_NAME="Medium_Phone_API_36.1"
-SDK="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-$HOME/Android/Sdk}}"
+# SDK: ANDROID_HOME/ANDROID_SDK_ROOT, senão o caminho padrão do Windows
+# (%LOCALAPPDATA%\Android\Sdk) ou do Linux/macOS (~/Android/Sdk).
+if [ -n "${ANDROID_HOME:-${ANDROID_SDK_ROOT:-}}" ]; then
+  SDK="${ANDROID_HOME:-$ANDROID_SDK_ROOT}"
+elif [ -n "${LOCALAPPDATA:-}" ] && [ -d "$LOCALAPPDATA/Android/Sdk" ]; then
+  SDK="$LOCALAPPDATA/Android/Sdk"
+else
+  SDK="$HOME/Android/Sdk"
+fi
+export ANDROID_HOME="$SDK"
 ADB="$SDK/platform-tools/adb"
 EMULATOR="$SDK/emulator/emulator"
+
+# AVD: use AVD_NAME=... para escolher; por padrão pega o primeiro da máquina.
+AVD_NAME="${AVD_NAME:-$("$EMULATOR" -list-avds 2>/dev/null | head -n 1 | tr -d '')}"
+
+# O Gradle precisa de Java 17+; se o JAVA_HOME não servir, usa o JDK que vem
+# com o Android Studio (evita baixar outro Java).
+JBR_STUDIO="/c/Program Files/Android/Android Studio/jbr"
+if [ -d "$JBR_STUDIO" ] && ! "${JAVA_HOME:+$JAVA_HOME/bin/}java" -version 2>&1 | grep -qE 'version "(1[7-9]|2[0-9])'; then
+  export JAVA_HOME="$JBR_STUDIO"
+fi
 APP_ID="com.sentinela.app"
 ACTIVITY=".MainActivity"
 
@@ -70,4 +88,5 @@ echo "Compilando e instalando o app (./gradlew installDebug)..."
 ./gradlew installDebug
 
 echo "Abrindo o app no emulador..."
-"$ADB" shell am start -n "$APP_ID/$ACTIVITY"
+# -W espera a Activity abrir (logo após o boot o launcher às vezes "rouba" o foco).
+"$ADB" shell am start -W -n "$APP_ID/$ACTIVITY"
