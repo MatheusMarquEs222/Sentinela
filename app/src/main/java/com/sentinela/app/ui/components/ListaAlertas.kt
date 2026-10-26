@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Notifications
@@ -21,6 +22,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
@@ -44,7 +46,14 @@ fun ListaAlertas(alertas: List<Alerta>, modifier: Modifier = Modifier) {
             return@Column
         }
 
+        // A LazyColumn mantém a posição pelo item que estava no topo; sem isso,
+        // um alerta novo entraria acima da área visível e ficaria escondido.
+        val estadoLista = rememberLazyListState()
+        LaunchedEffect(alertas.first().id) {
+            estadoLista.animateScrollToItem(0)
+        }
         LazyColumn(
+            state = estadoLista,
             modifier = Modifier.weight(1f),
             verticalArrangement = Arrangement.spacedBy(10.dp),
             // Espaço extra no fim para o último cartão não ficar sob o botão flutuante.
