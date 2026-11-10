@@ -1,6 +1,7 @@
-package com.sentinela.app.ui.screens
+package com.sentinela.app.ui.screens.alertas
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -15,6 +16,7 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.FilledTonalButton
@@ -29,86 +31,63 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
-import androidx.compose.runtime.toMutableStateList
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.sentinela.app.model.Alerta
 import com.sentinela.app.model.Severidade
 import com.sentinela.app.ui.components.FormularioAlerta
 import com.sentinela.app.ui.components.ListaAlertas
 import com.sentinela.app.ui.theme.SentinelaTheme
 
-private fun alertasIniciais(): List<Alerta> = listOf(
-    Alerta(
-        id = 1,
-        tipo = "Risco de alagamento",
-        local = "Bairro Vila Nova",
-        descricao = "Chuva forte prevista para as próximas horas; ruas baixas podem alagar.",
-        severidade = Severidade.ALTA,
-        horario = "08:12"
-    ),
-    Alerta(
-        id = 2,
-        tipo = "Vendaval",
-        local = "Região Central",
-        descricao = "Rajadas de vento acima de 60 km/h detectadas pela estação local.",
-        severidade = Severidade.MEDIA,
-        horario = "07:40"
-    ),
-    Alerta(
-        id = 3,
-        tipo = "Qualidade do ar",
-        local = "Zona Industrial",
-        descricao = "Índice de poluição levemente acima da média para o período.",
-        severidade = Severidade.BAIXA,
-        horario = "06:55"
-    )
-)
-
 /**
- * Tela principal do Sentinela — "stateful": é aqui que mora o estado real
- * (a lista de alertas, a visibilidade do formulário e a mensagem de
- * confirmação). Os componentes que ela usa ([ListaAlertas], [FormularioAlerta])
- * são todos stateless e recebem tudo via parâmetros/callbacks, seguindo o
- * padrão de state hoisting.
+ * Tela principal do Sentinela. Obtém o [AlertasViewModel] e repassa seu estado
+ * para [ConteudoTelaAlertas]; não guarda estado nem contém regras de negócio.
  */
+@Composable
+fun TelaAlertas(
+    modifier: Modifier = Modifier,
+    viewModel: AlertasViewModel = viewModel(factory = AlertasViewModel.Factory)
+) {
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val formulario by viewModel.formulario.collectAsStateWithLifecycle()
+    val mensagem by viewModel.mensagem.collectAsStateWithLifecycle()
+
+    ConteudoTelaAlertas(
+        uiState = uiState,
+        formulario = formulario,
+        mensagem = mensagem,
+        onAbrirFormulario = viewModel::abrirFormulario,
+        onFecharFormulario = viewModel::fecharFormulario,
+        onRegistrar = viewModel::registrarAlerta,
+        onCampoAlterado = viewModel::limparErroFormulario,
+        onSimularOficial = viewModel::simularAlertaOficial,
+        onDispensarMensagem = viewModel::dispensarMensagem,
+        modifier = modifier
+    )
+}
+
+/** Versão stateless da tela: tudo chega por parâmetro e sai por callback. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun TelaAlertas(modifier: Modifier = Modifier) {
-    var mostrarFormulario by rememberSaveable { mutableStateOf(false) }
-    var mensagemConfirmacao by rememberSaveable { mutableStateOf<String?>(null) }
-    val alertas = remember { alertasIniciais().toMutableStateList() }
-    var proximoId by remember { mutableStateOf(alertas.size + 1) }
-
-    fun registrarAlerta(novoAlerta: Alerta) {
-        alertas.add(0, novoAlerta.copy(id = proximoId))
-        proximoId++
-        mostrarFormulario = false
-        mensagemConfirmacao = "Alerta \"${novoAlerta.tipo}\" registrado com sucesso!"
-    }
-
-    fun simularAlertaOficial() {
-        val alertaOficial = Alerta(
-            id = proximoId,
-            tipo = "Alerta oficial de defesa civil",
-            local = "Toda a cidade",
-            descricao = "Risco de deslizamento em áreas de encosta. Evite deslocamentos desnecessários.",
-            severidade = Severidade.ALTA,
-            horario = "agora",
-            oficial = true
-        )
-        proximoId++
-        alertas.add(0, alertaOficial)
-        mensagemConfirmacao = "Novo alerta recebido: ${alertaOficial.tipo}"
-    }
-
+fun ConteudoTelaAlertas(
+    uiState: AlertasUiState,
+    formulario: FormularioUiState,
+    mensagem: String?,
+    onAbrirFormulario: () -> Unit,
+    onFecharFormulario: () -> Unit,
+    onRegistrar: (DadosFormulario) -> Unit,
+    onCampoAlterado: () -> Unit,
+    onSimularOficial: () -> Unit,
+    onDispensarMensagem: () -> Unit,
+    modifier: Modifier = Modifier
+) {
     Scaffold(
         modifier = modifier,
         topBar = {
@@ -125,7 +104,7 @@ fun TelaAlertas(modifier: Modifier = Modifier) {
                 },
                 actions = {
                     FilledTonalButton(
-                        onClick = { simularAlertaOficial() },
+                        onClick = onSimularOficial,
                         contentPadding = ButtonDefaults.ButtonWithIconContentPadding,
                         modifier = Modifier.padding(end = 8.dp)
                     ) {
@@ -142,7 +121,10 @@ fun TelaAlertas(modifier: Modifier = Modifier) {
         },
         floatingActionButton = {
             ExtendedFloatingActionButton(
-                onClick = { mostrarFormulario = true },
+                onClick = onAbrirFormulario,
+                // O texto do FAB estendido não chega à árvore de acessibilidade;
+                // sem este rótulo o TalkBack anuncia só "botão".
+                modifier = Modifier.semantics { contentDescription = "Registrar alerta" },
                 icon = { Icon(Icons.Filled.Add, contentDescription = null) },
                 text = { Text("Registrar alerta") }
             )
@@ -154,28 +136,46 @@ fun TelaAlertas(modifier: Modifier = Modifier) {
                 .padding(innerPadding)
                 .padding(horizontal = 16.dp)
         ) {
-            mensagemConfirmacao?.let { mensagem ->
+            mensagem?.let { texto ->
                 BannerConfirmacao(
-                    mensagem = mensagem,
-                    onFechar = { mensagemConfirmacao = null },
+                    mensagem = texto,
+                    onFechar = onDispensarMensagem,
                     modifier = Modifier.padding(top = 8.dp)
                 )
             }
 
-            ListaAlertas(
-                alertas = alertas,
-                modifier = Modifier.weight(1f)
-            )
+            when (uiState) {
+                AlertasUiState.Carregando -> Box(
+                    modifier = Modifier.weight(1f).fillMaxWidth(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    CircularProgressIndicator()
+                }
+
+                is AlertasUiState.Erro -> Box(
+                    modifier = Modifier.weight(1f).fillMaxWidth(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(text = uiState.mensagem, color = MaterialTheme.colorScheme.error)
+                }
+
+                is AlertasUiState.Sucesso -> ListaAlertas(
+                    alertas = uiState.alertas,
+                    modifier = Modifier.weight(1f)
+                )
+            }
         }
 
-        if (mostrarFormulario) {
+        if (formulario.aberto) {
             ModalBottomSheet(
-                onDismissRequest = { mostrarFormulario = false },
+                onDismissRequest = onFecharFormulario,
                 sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
             ) {
                 FormularioAlerta(
-                    onSubmit = ::registrarAlerta,
-                    onCancelar = { mostrarFormulario = false }
+                    erro = formulario.erro,
+                    onSubmit = onRegistrar,
+                    onCampoAlterado = onCampoAlterado,
+                    onCancelar = onFecharFormulario
                 )
             }
         }
@@ -213,6 +213,28 @@ private fun BannerConfirmacao(mensagem: String, onFechar: () -> Unit, modifier: 
 @Composable
 private fun TelaAlertasPreview() {
     SentinelaTheme(dynamicColor = false) {
-        TelaAlertas(modifier = Modifier.fillMaxSize())
+        ConteudoTelaAlertas(
+            uiState = AlertasUiState.Sucesso(
+                listOf(
+                    Alerta(
+                        id = 1,
+                        tipo = "Risco de alagamento",
+                        local = "Bairro Vila Nova",
+                        descricao = "Chuva forte prevista para as próximas horas.",
+                        severidade = Severidade.ALTA,
+                        criadoEm = System.currentTimeMillis()
+                    )
+                )
+            ),
+            formulario = FormularioUiState(),
+            mensagem = null,
+            onAbrirFormulario = {},
+            onFecharFormulario = {},
+            onRegistrar = {},
+            onCampoAlterado = {},
+            onSimularOficial = {},
+            onDispensarMensagem = {},
+            modifier = Modifier.fillMaxSize()
+        )
     }
 }

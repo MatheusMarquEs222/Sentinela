@@ -13,16 +13,18 @@ enum class Severidade(val rotulo: String) {
 /**
  * Representa um alerta climático ou de defesa civil comunitária.
  *
- * Nesta primeira entrega os alertas vivem apenas em memória (estado local da tela).
- * Quando a equipe integrar a API pública de alertas, esta classe passa a ser
- * populada a partir da resposta remota em vez de dados mockados.
+ * É o modelo usado pelas camadas de UI e ViewModel; a camada de dados converte
+ * de/para [com.sentinela.app.data.local.AlertaEntity] ao ler e gravar no Room.
+ *
+ * @property id identificador gerado pelo banco (0 enquanto o alerta não foi salvo).
+ * @property criadoEm momento do registro, em milissegundos desde a época (epoch).
  */
 data class Alerta(
-    val id: Int,
+    val id: Long = 0,
     val tipo: String,
     val local: String,
     val descricao: String,
     val severidade: Severidade,
-    val horario: String,
+    val criadoEm: Long,
     val oficial: Boolean = false
 )

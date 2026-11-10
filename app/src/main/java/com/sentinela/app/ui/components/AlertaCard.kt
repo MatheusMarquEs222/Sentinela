@@ -35,6 +35,7 @@ import androidx.compose.ui.unit.dp
 import com.sentinela.app.model.Alerta
 import com.sentinela.app.model.Severidade
 import com.sentinela.app.ui.theme.SentinelaTheme
+import com.sentinela.app.ui.util.horarioFormatado
 import com.sentinela.app.ui.theme.SeveridadeAlta
 import com.sentinela.app.ui.theme.SeveridadeAltaEscuro
 import com.sentinela.app.ui.theme.SeveridadeAltaFundo
@@ -125,7 +126,7 @@ fun AlertaCard(alerta: Alerta, modifier: Modifier = Modifier) {
             if (alerta.descricao.isNotBlank()) {
                 Text(text = alerta.descricao, style = MaterialTheme.typography.bodyMedium)
             }
-            InfoComIcone(icone = Icons.Filled.DateRange, texto = alerta.horario)
+            InfoComIcone(icone = Icons.Filled.DateRange, texto = alerta.horarioFormatado())
         }
     }
 }
@@ -207,11 +208,11 @@ private fun AlertaCardPreview() {
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             AlertaCard(
                 Alerta(1, "Risco de alagamento", "Bairro Vila Nova",
-                    "Chuva forte prevista para as próximas horas.", Severidade.ALTA, "08:12")
+                    "Chuva forte prevista para as próximas horas.", Severidade.ALTA, System.currentTimeMillis())
             )
             AlertaCard(
                 Alerta(2, "Alerta oficial de defesa civil", "Toda a cidade",
-                    "Risco de deslizamento em áreas de encosta.", Severidade.ALTA, "agora", oficial = true)
+                    "Risco de deslizamento em áreas de encosta.", Severidade.ALTA, System.currentTimeMillis(), oficial = true)
             )
         }
     }
