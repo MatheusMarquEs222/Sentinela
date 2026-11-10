@@ -32,24 +32,24 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import com.sentinela.app.model.Alerta
 import com.sentinela.app.model.Severidade
+import com.sentinela.app.ui.screens.alertas.DadosFormulario
 import com.sentinela.app.ui.theme.SentinelaTheme
 
 /**
  * Formulário para registrar um novo alerta (exibido dentro de um bottom sheet
  * pela tela principal).
  *
- * O componente é "stateless" do ponto de vista de quem o usa: não recebe nem
- * expõe a lista de alertas, apenas devolve um [Alerta] pronto via [onSubmit]
- * quando o usuário confirma. Os campos de texto (título, local, descrição)
- * são estado de edição local — via [mutableStateOf]/[remember] — que só "sobe"
- * para o componente pai (a tela) no momento do envio, seguindo o padrão de
- * state hoisting.
+ * Os campos de texto são estado de edição local — via [mutableStateOf]/[remember] —
+ * que só "sobe" no envio, como [DadosFormulario] em [onSubmit]. A validação fica
+ * no ViewModel, que devolve a mensagem em [erro]; [onCampoAlterado] avisa quando
+ * o usuário volta a editar o tipo ou o local, para a mensagem ser removida.
  */
 @Composable
 fun FormularioAlerta(
-    onSubmit: (Alerta) -> Unit,
+    erro: String?,
+    onSubmit: (DadosFormulario) -> Unit,
+    onCampoAlterado: () -> Unit,
     onCancelar: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -57,7 +57,6 @@ fun FormularioAlerta(
     var local by remember { mutableStateOf("") }
     var descricao by remember { mutableStateOf("") }
     var severidade by remember { mutableStateOf(Severidade.BAIXA) }
-    var mensagemDeErro by remember { mutableStateOf<String?>(null) }
 
     Column(
         modifier = modifier
@@ -80,17 +79,17 @@ fun FormularioAlerta(
             )
         }
 
-        mensagemDeErro?.let { erro -> MensagemErro(erro) }
+        erro?.let { MensagemErro(it) }
 
         OutlinedTextField(
             value = titulo,
             onValueChange = {
                 titulo = it
-                mensagemDeErro = null
+                onCampoAlterado()
             },
             label = { Text("Tipo de ocorrência *") },
             placeholder = { Text("Ex.: alagamento, vendaval") },
-            isError = mensagemDeErro != null && titulo.isBlank(),
+            isError = erro != null && titulo.isBlank(),
             singleLine = true,
             shape = RoundedCornerShape(12.dp),
             modifier = Modifier.fillMaxWidth()
@@ -100,11 +99,11 @@ fun FormularioAlerta(
             value = local,
             onValueChange = {
                 local = it
-                mensagemDeErro = null
+                onCampoAlterado()
             },
             label = { Text("Local / bairro *") },
             placeholder = { Text("Ex.: Bairro Vila Nova") },
-            isError = mensagemDeErro != null && local.isBlank(),
+            isError = erro != null && local.isBlank(),
             singleLine = true,
             shape = RoundedCornerShape(12.dp),
             modifier = Modifier.fillMaxWidth()
@@ -156,24 +155,7 @@ fun FormularioAlerta(
                     .weight(1f)
                     .height(48.dp),
                 onClick = {
-                    if (titulo.isBlank() || local.isBlank()) {
-                        mensagemDeErro = "Preencha ao menos o tipo e o local da ocorrência."
-                        return@Button
-                    }
-                    onSubmit(
-                        Alerta(
-                            id = 0, // o id definitivo é atribuído por quem recebe o alerta
-                            tipo = titulo.trim(),
-                            local = local.trim(),
-                            descricao = descricao.trim(),
-                            severidade = severidade,
-                            horario = "agora"
-                        )
-                    )
-                    titulo = ""
-                    local = ""
-                    descricao = ""
-                    severidade = Severidade.BAIXA
+                    onSubmit(DadosFormulario(titulo, local, descricao, severidade))
                 }
             ) {
                 Text("Registrar")
@@ -248,6 +230,6 @@ private fun BotaoSeveridade(
 @Composable
 private fun FormularioAlertaPreview() {
     SentinelaTheme(dynamicColor = false) {
-        FormularioAlerta(onSubmit = {}, onCancelar = {})
+        FormularioAlerta(erro = null, onSubmit = {}, onCampoAlterado = {}, onCancelar = {})
     }
 }
